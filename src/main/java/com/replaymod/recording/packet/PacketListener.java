@@ -153,9 +153,17 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
         saveMetaData();
     }
 
+    private static Runnable traceSave(String operation, Runnable work) {
+        //#if MC>=12108
+        return net.easecation.performance.api.TraceLink.task("replaymod", operation, work);
+        //#else
+        //$$ return work;
+        //#endif
+    }
+
     private void saveMetaData() {
         int id = lastSaveMetaDataId.incrementAndGet();
-        saveService.submit(() -> {
+        saveService.submit(traceSave("metadata/write", () -> {
             if (lastSaveMetaDataId.get() != id) {
                 return; // Another job has been scheduled, it will do the hard work.
             }
@@ -179,10 +187,16 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
                 logger.error("Writing metadata:", e);
                 saveFailure.compareAndSet(null, e);
             }
-        });
+        }));
     }
 
     public void save(net.minecraft.network.Packet packet) {
+        //#if MC>=12108
+        long traceToken=net.easecation.performance.api.TraceLink.begin("replaymod","packet/encode");
+        boolean traceFailed=false;
+        try {
+        //#endif
+
         Packet encoded;
         try {
             encoded = encodeMcPacket(getConnectionState(), packet);
@@ -191,9 +205,20 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
             return;
         }
         save(encoded);
+
+        //#if MC>=12108
+        } catch (RuntimeException | Error traceError) {traceFailed=true;throw traceError;}
+        finally {net.easecation.performance.api.TraceLink.end(traceToken,traceFailed);}
+        //#endif
     }
 
     public void save(Packet packet) {
+        //#if MC>=12108
+        long traceToken=net.easecation.performance.api.TraceLink.begin("replaymod","packet/accept");
+        boolean traceFailed=false;
+        try {
+        //#endif
+
         if (!acceptingPackets) {
             return;
         }
@@ -215,7 +240,11 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
             //$$     }
             //$$ });
             //#else
-            mc.send(() -> save(packet));
+            //#if MC>=12108
+            mc.send(net.easecation.performance.api.TraceLink.task("replaymod","packet/main_apply",() -> save(packet)));
+            //#else
+            //$$ mc.send(() -> save(packet));
+            //#endif
             //#endif
             return;
         }
@@ -228,7 +257,7 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
             int timestamp = (int) (now - startTime - timePassedWhilePaused);
             lastSentPacket = timestamp;
             PacketData packetData = new PacketData(timestamp, packet);
-            saveService.submit(() -> {
+            saveService.submit(traceSave("packet/write", () -> {
                 try {
                     if (ReplayMod.isMinimalMode()) {
                         // Minimal mode, ReplayStudio might not know our packet ids, so we cannot use it
@@ -254,10 +283,15 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
                     saveFailure.compareAndSet(null, e);
                     throw new RuntimeException(e);
                 }
-            });
+            }));
         } catch(Exception e) {
             logger.error("Writing packet:", e);
         }
+
+        //#if MC>=12108
+        } catch (RuntimeException | Error traceError) {traceFailed=true;throw traceError;}
+        finally {net.easecation.performance.api.TraceLink.end(traceToken,traceFailed);}
+        //#endif
     }
 
     @Override
@@ -584,7 +618,7 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
             marker.setPitch(view.pitch);
         }
         // Roll is always 0
-        saveService.submit(() -> {
+        saveService.submit(traceSave("markers/write", () -> {
             synchronized (replayFile) {
                 try {
                     Set<Marker> markers = replayFile.getMarkers().or(HashSet::new);
@@ -595,7 +629,7 @@ public class PacketListener extends ChannelInboundHandlerAdapter {
                     saveFailure.compareAndSet(null, e);
                 }
             }
-        });
+        }));
     }
 
     public long getCurrentDuration() {

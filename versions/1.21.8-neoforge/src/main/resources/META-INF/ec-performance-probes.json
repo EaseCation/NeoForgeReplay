@@ -1,0 +1,13 @@
+{
+  "schema": "ec-scopes/1",
+  "modId": "replaymod",
+  "sections": [],
+  "taskOperations": [
+    "markers/write",
+    "metadata/write",
+    "packet/accept",
+    "packet/encode",
+    "packet/main_apply",
+    "packet/write"
+  ]
+}

@@ -98,6 +98,11 @@ val shadow by configurations.creating {
 }
 
 dependencies {
+    if (mcVersion >= 12108) {
+        implementation("net.easecation.clientdiagnostics:performance-api:1.0.0")
+        "include"("net.easecation.clientdiagnostics:performance-api:1.0.0")
+    }
+
     if (project.name == "1.21.8-neoforge") {
         mappings(loom.layered {
             mappings("net.fabricmc:yarn:1.21.8+build.1:v2")
