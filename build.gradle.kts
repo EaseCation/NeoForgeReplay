@@ -65,7 +65,17 @@ if (platform.isLegacyForge) {
 }
 
 repositories {
-    mavenLocal()
+    // EaseCation private repository (Aliyun Yunxiao Packages), only for net.easecation.* coordinates.
+    // Credentials: yunxiaoMavenUsername / yunxiaoMavenPassword in ~/.gradle/gradle.properties.
+    exclusiveContent {
+        forRepository {
+            maven("https://easecation-cn-hangzhou.devops.aliyuncs.com/packages/api/protocol/maven/14075-release-h64s7e") {
+                name = "yunxiaoMaven"
+                credentials(PasswordCredentials::class)
+            }
+        }
+        filter { includeGroupByRegex("net\\.easecation(\\..*)?") }
+    }
     maven("https://repo.spongepowered.org/maven/")
     maven("https://maven.terraformersmc.com/releases/") {
         content {
@@ -99,8 +109,8 @@ val shadow by configurations.creating {
 
 dependencies {
     if (mcVersion >= 12108) {
-        implementation("net.easecation.clientdiagnostics:performance-api:1.0.0")
-        "include"("net.easecation.clientdiagnostics:performance-api:1.0.0")
+        implementation("net.easecation.clientdiagnostics:performance-api:1.1.10")
+        "include"("net.easecation.clientdiagnostics:performance-api:1.1.10")
     }
 
     if (project.name == "1.21.8-neoforge") {
